@@ -10,6 +10,9 @@ import urllib
 import time
 import base64
 
+import tarfile
+import zipfile
+
 base = "https://gatech.instructure.com"
 
 token = ""
@@ -20,6 +23,9 @@ canvasCourseAssignments = []
 courseAssignmentSubmissions = []
 course = ""
 assignment = ""
+
+course_name = ""
+assignment_name = ""
 
 plago_base = "http://plago.cc.gatech.edu/api/"
 plago_apikey = ""
@@ -229,6 +235,19 @@ def FindSubmissionByUser(user):
             return entry
     return None
 
+
+def PromptCourseName():
+    global course_name
+    print("What is the name of the course (ex: CS1701 The Second Prize)?")
+    while len(course_name) <= 0:
+        course_name = str(input(":")).strip()
+
+def PromptAssignmentName():
+    global assignment_name
+    print("What is the name of the assignment (ex: A2)?")
+    while len(assignment_name) <= 0:
+        assignment_name = str(input(":")).strip()
+
 ################################################################################
 
 def ProcessAllCourses():
@@ -257,10 +276,7 @@ def ProcessCourse():
 
     GetCourseAssignments()
 
-    if (len(sys.argv) > 4):
-        assignment = sys.argv[4]
-    else:
-        PromptAssignment()
+    PromptAssignment()
 
     if (assignment.lower() == "all"):
         ProcessAllAssignments()
@@ -373,6 +389,8 @@ def TsquareProcessArchive(pdfs):
         PlagoBatchEntryAdd(plago_batch_id, user_id, user_name, data)
 
 def Tsquare(filename):
+    PromptCourseName()
+
     print("Opening: " + filename)
 
     archive = zipfile.ZipFile(filename, "r")
@@ -399,6 +417,44 @@ def Tsquare(filename):
     print("id: " + str(plago_batch_id))
 
     TsquareProcessArchive(pdfs)
+
+    print("\nQueuing Batch")
+    PlagoBatchQueue(plago_batch_id)
+
+################################################################################
+
+def Tony(filename):
+    global course_name
+    global assignment_name
+
+    PromptCourseName()
+    PromptAssignmentName()
+
+    print("Adding TsquareBatch to Plago.")
+    PlagoBatchAdd(10, "", course_name, "", assignment_name)  # 10 = custom
+    print("id: " + str(plago_batch_id))
+
+    print("Opening: " + filename)
+    tar = tarfile.open(filename, "r:gz")
+    for member in tar.getmembers():
+        if (member.isfile() == False):
+            continue
+        values = member.name.split("/")
+        temp = values[5].split("(")
+        user_name = temp[0]
+        user_id = temp[1].replace(")", "")
+        print(user_name)
+        print ("  Extracting...")
+        f = tar.extractfile(member)
+        if f is None:
+            print ("ERROR: Could not read " + member.name)
+            continue
+        data = f.read()
+        print ("  Uploading...")
+        PlagoBatchEntryAdd(plago_batch_id, user_id, user_name, data)
+        
+    print("\nQueuing Batch")
+    PlagoBatchQueue(plago_batch_id)
 
 ################################################################################
 
@@ -436,7 +492,7 @@ def PromptMenu():
     print("Which type of import?")
     print("> canvas")
     print("> tsquare filename.zip")
-    print("> tony filename.zip")
+    print("> tony filename.tar.gz")
 
     while True:
         option = ""
