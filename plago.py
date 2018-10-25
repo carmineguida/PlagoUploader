@@ -68,12 +68,13 @@ def PlagoBatchAdd(source, source_course_id, source_course_name, source_assignmen
     data = PlagoAPIPost("batch_add", params)
     plago_batch_id = data["id"]
 
-def PlagoBatchEntryAdd(batch_id, source_user_id, source_user_name, data):
+def PlagoBatchEntryAdd(batch_id, source_user_id, source_user_name, filename, data):
     data_base64 = base64.b64encode(data).decode("utf-8")
     params = {
         "batch_id":batch_id,
         "source_user_id":source_user_id,
         "source_user_name":source_user_name,
+        "filename":filename,
         "data_base64": data_base64
     }
 
@@ -311,17 +312,17 @@ def ProcessAssignment():
         print("No assignments submitted.")
         return
 
-    print("Adding CanvasBatch to Plago.")
+    print("Adding Canvas Batch to Plago.")
     PlagoBatchAdd(1, currentCourse["id"], currentCourse["name"], currentAssignment["id"], currentAssignment["name"]) # 1 = Canvas
     print("id: " + str(plago_batch_id))
 
     for user in canvasCourseUsers:
-        submission = DownloadSubmissionByUser(user)
+        (submission, filename) = DownloadSubmissionByUser(user)
         if (submission is None):
             continue
 
         print("Adding: " + user["sortable_name"] + " (" + str(len(submission)) + " bytes)")
-        PlagoBatchEntryAdd(plago_batch_id, user["id"], user["sortable_name"], submission)
+        PlagoBatchEntryAdd(plago_batch_id, user["id"], user["sortable_name"], filename, submission)
 
     print("\nQueuing Batch")
     PlagoBatchQueue(plago_batch_id)
@@ -339,17 +340,19 @@ def DownloadSubmissionByUser(user):
     attachments = submission["attachments"]
 
     final_url = ""
+    filename = ""
     for attachment in attachments:
         url = attachment["url"]
         if (url == ""):
             continue
         final_url = url
+        filename = attachment["filename"]
 
     if (final_url == ""):
         return None
 
     response = requests.get(final_url)
-    return response.content
+    return (filename, response.content)
 
 ################################################################################
 
@@ -386,7 +389,7 @@ def TsquareProcessArchive(pdfs):
         print ("Extracting...")
         data = archive.read(name)
         print ("Uploading...")
-        PlagoBatchEntryAdd(plago_batch_id, user_id, user_name, data)
+        PlagoBatchEntryAdd(plago_batch_id, user_id, user_name, name, data)
 
 def Tsquare(filename):
     PromptCourseName()
@@ -412,7 +415,7 @@ def Tsquare(filename):
 
     print("Assignment: " + assignment_name)
 
-    print("Adding TsquareBatch to Plago.")
+    print("Adding Tsquare Batch to Plago.")
     PlagoBatchAdd(2, course_name, assignment_name)  # 2 = tsquare
     print("id: " + str(plago_batch_id))
 
@@ -423,6 +426,22 @@ def Tsquare(filename):
 
 ################################################################################
 
+def TonyGetUserInfo(name):
+    try:
+        user_name = ""
+        user_id = ""
+
+        values = name.split("/")
+        temp = values[5].split("(")
+        user_name = temp[0]
+        if (len(temp) > 1):
+            user_id = temp[1].replace(")", "")
+
+        return (user_id, user_name)
+    except:
+        print("ERROR: Could not parse: " + name)
+        return ("", "")
+
 def Tony(filename):
     global course_name
     global assignment_name
@@ -430,20 +449,23 @@ def Tony(filename):
     PromptCourseName()
     PromptAssignmentName()
 
-    print("Adding TsquareBatch to Plago.")
+    print("Adding Tony Batch to Plago.")
     PlagoBatchAdd(10, "", course_name, "", assignment_name)  # 10 = custom
     print("id: " + str(plago_batch_id))
 
     print("Opening: " + filename)
     tar = tarfile.open(filename, "r:gz")
+    members = tar.getmembers()
+    memlen = len(members)
+    count = 0
     for member in tar.getmembers():
+        count = count + 1
         if (member.isfile() == False):
             continue
-        values = member.name.split("/")
-        temp = values[5].split("(")
-        user_name = temp[0]
-        user_id = temp[1].replace(")", "")
-        print(user_name)
+        (user_id, user_name) = TonyGetUserInfo(member.name)
+        if (user_name == ""):
+            continue
+        print(str(count) + "/" + str(memlen) + ": " + user_name)
         print ("  Extracting...")
         f = tar.extractfile(member)
         if f is None:
@@ -451,8 +473,8 @@ def Tony(filename):
             continue
         data = f.read()
         print ("  Uploading...")
-        PlagoBatchEntryAdd(plago_batch_id, user_id, user_name, data)
-        
+        PlagoBatchEntryAdd(plago_batch_id, user_id, user_name, member.name, data)
+
     print("\nQueuing Batch")
     PlagoBatchQueue(plago_batch_id)
 
