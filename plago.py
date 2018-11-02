@@ -317,7 +317,12 @@ def ProcessAssignment():
     print("id: " + str(plago_batch_id))
 
     for user in canvasCourseUsers:
-        (submission, filename) = DownloadSubmissionByUser(user)
+        download = DownloadSubmissionByUser(user)
+        if (download is None):
+            continue
+
+        (filename, submission) = download
+
         if (submission is None):
             continue
 
@@ -346,7 +351,7 @@ def DownloadSubmissionByUser(user):
         if (url == ""):
             continue
         final_url = url
-        filename = attachment["filename"]
+        filename = attachment["display_name"]
 
     if (final_url == ""):
         return None
