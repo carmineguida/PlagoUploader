@@ -382,7 +382,49 @@ def Canvas():
 
 ################################################################################
 
-def TsquareProcessArchive(pdfs):
+def CustomProcessArchive(archive, pdfs):
+    global plago_batch_id
+
+    for name in pdfs:
+        user_name = ""
+        user_id = ""
+        print ("Extracting: " + name)
+        data = archive.read(name)
+        print ("Uploading...")
+        PlagoBatchEntryAdd(plago_batch_id, user_id, user_name, name, data)
+
+def Custom(filename):
+    PromptCourseName()
+    PromptAssignmentName()
+
+    print("Opening: " + filename)
+
+    archive = zipfile.ZipFile(filename, "r")
+    files = archive.namelist()
+    pdfs = []
+    for name in files:
+        if (name.lower().endswith(".pdf")):
+            pdfs.append(name)
+
+    count = len(pdfs)
+    if (count <= 0):
+        print("No pdfs were found.")
+
+    print(str(count) + " pdfs found!")
+    print("Assignment: " + assignment_name)
+
+    print("Adding Custom Batch to Plago.")
+    PlagoBatchAdd(10, "", course_name, "", assignment_name)  # 10 = custom
+    print("id: " + str(plago_batch_id))
+
+    CustomProcessArchive(archive, pdfs)
+
+    print("\nQueuing Batch")
+    PlagoBatchQueue(plago_batch_id)
+
+################################################################################
+
+def TsquareProcessArchive(archive, pdfs):
     global plago_batch_id
 
     for name in pdfs:
@@ -421,10 +463,10 @@ def Tsquare(filename):
     print("Assignment: " + assignment_name)
 
     print("Adding Tsquare Batch to Plago.")
-    PlagoBatchAdd(2, course_name, assignment_name)  # 2 = tsquare
+    PlagoBatchAdd(2, "", course_name, "", assignment_name)  # 2 = tsquare
     print("id: " + str(plago_batch_id))
 
-    TsquareProcessArchive(pdfs)
+    TsquareProcessArchive(archive, pdfs)
 
     print("\nQueuing Batch")
     PlagoBatchQueue(plago_batch_id)
@@ -511,6 +553,11 @@ def ProcessMenuOption(option):
         Tsquare(filename)
         quit()
 
+    if (command == "custom"):
+        Custom(filename)
+        quit()
+
+
     if (command == "tony"):
         Tony(filename)
         quit()
@@ -519,6 +566,7 @@ def PromptMenu():
     print("Which type of import?")
     print("> canvas")
     print("> tsquare filename.zip")
+    print("> custom filename.zip")
     print("> tony filename.tar.gz")
 
     while True:
