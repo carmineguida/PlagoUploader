@@ -2,13 +2,9 @@
 # plago.py - Originally coded by: Carmine T. Guida
 ################################################################################
 
-import os
+import io
 import sys
 import requests
-import csv
-import urllib
-import time
-import base64
 
 import tarfile
 import zipfile
@@ -33,27 +29,32 @@ plago_batch_id = ""
 
 ################################################################################
 
-def PlagoAPIPost(url, params):
+def PlagoAPIPost(url, params, files=None):
     global base
     global token
     global perPage
 
     headers = {"Authorization": "Bearer " + plago_apikey}
-    response = requests.post(plago_base + url, headers=headers, json=params)
+    if (files == None):
+        response = requests.post(plago_base + url, headers=headers, json=params, timeout=None)
+    else:
+        response = requests.post(plago_base + url, headers=headers, data=params, files=files, timeout=None)
 
     if (response.status_code != requests.codes.ok):
         print("ERROR HTTP STATUS CODE: " + str(response.status_code))
+        #print (response.text)
     else:
         #print (response.text)
         result = response.json()
         status = result["status"]
         if (status == "fatal"):
             print("PlagoAPIPost: A fatal error occurred.")
-            exit();
+            exit()
         if (status == "error"):
             print("PlagoAPIPost: ERROR " + result["message"])
-            exit();
+            exit()
         return result["data"]
+
 
 def PlagoBatchAdd(source, source_course_id, source_course_name, source_assignment_id, source_assignment_name):
     global plago_batch_id
@@ -68,17 +69,21 @@ def PlagoBatchAdd(source, source_course_id, source_course_name, source_assignmen
     data = PlagoAPIPost("batch_add", params)
     plago_batch_id = data["id"]
 
+
 def PlagoBatchEntryAdd(batch_id, source_user_id, source_user_name, filename, data):
-    data_base64 = base64.b64encode(data).decode("utf-8")
     params = {
         "batch_id":batch_id,
         "source_user_id":source_user_id,
         "source_user_name":source_user_name,
-        "filename":filename,
-        "data_base64": data_base64
+        "filename":filename
     }
 
-    PlagoAPIPost("batchentry_add", params)
+    stream = io.BytesIO(data)
+
+    files = {"file":stream}
+
+    PlagoAPIPost("batchentry_add", params, files)
+
 
 def PlagoBatchQueue(id):
     params = {
@@ -475,7 +480,6 @@ def Tsquare(filename):
 
 def TonyGetUserInfo(name):
     try:
-        user_name = ""
         user_id = ""
 
         values = name.split("/")
@@ -531,7 +535,7 @@ def ProcessMenuOption(option):
     command = ""
     filename = ""
     otherfile = ""
-    options = option.split();
+    options = option.split()
 
     if (len(options) > 0):
         command = options[0].strip().lower()
