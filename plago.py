@@ -27,6 +27,8 @@ plago_base = "http://plago.cc.gatech.edu/api/"
 plago_apikey = ""
 plago_batch_id = ""
 
+REQUEST_TIMEOUT = None
+
 ################################################################################
 
 def PlagoAPIPost(url, params, files=None):
@@ -36,9 +38,9 @@ def PlagoAPIPost(url, params, files=None):
 
     headers = {"Authorization": "Bearer " + plago_apikey}
     if (files == None):
-        response = requests.post(plago_base + url, headers=headers, json=params, timeout=None)
+        response = requests.post(plago_base + url, headers=headers, json=params, timeout=REQUEST_TIMEOUT)
     else:
-        response = requests.post(plago_base + url, headers=headers, data=params, files=files, timeout=None)
+        response = requests.post(plago_base + url, headers=headers, data=params, files=files, timeout=REQUEST_TIMEOUT)
 
     if (response.status_code != requests.codes.ok):
         print("ERROR HTTP STATUS CODE: " + str(response.status_code))
@@ -112,7 +114,7 @@ def CanvasAPIGet(url):
 
     while True:
         params = {"page":str(pageNum), "per_page":"100"}
-        response = requests.get(current, headers=headers, params=params)
+        response = requests.get(current, headers=headers, params=params, timeout=REQUEST_TIMEOUT)
 
         if (response.status_code != requests.codes.ok):
             print("ERROR HTTP STATUS CODE: " + str(response.status_code))
@@ -139,7 +141,7 @@ def CanvasAPIPut(url, params):
 
     headers = {"Authorization": "Bearer " + token}
 
-    response = requests.put(base + url, headers=headers, data=params)
+    response = requests.put(base + url, headers=headers, data=params, timeout=REQUEST_TIMEOUT)
 
     if (response.status_code != requests.codes.ok):
         print("ERROR HTTP STATUS CODE: " + str(response.status_code))
@@ -154,7 +156,7 @@ def CanvasAPIPost(url, params):
 
     headers = {"Authorization": "Bearer " + token}
 
-    response = requests.post(base + url, headers=headers, data=params)
+    response = requests.post(base + url, headers=headers, data=params, timeout=REQUEST_TIMEOUT)
 
     if (response.status_code != requests.codes.ok):
         print("ERROR HTTP STATUS CODE: " + str(response.status_code))
