@@ -192,8 +192,10 @@ def GetCourseAssignmentSubmissions():
 
 ################################################################################
 
-def PromptToken():
+def PromptToken(command_line_token=""):
     global token
+    token = command_line_token
+
     print("What is your Canvas Token?")
     print("Found in: Canvas > Account > Settings > Approved Integrations: > New Access Token.")
     while len(token) <= 0:
@@ -368,12 +370,12 @@ def DownloadSubmissionByUser(user):
 
 ################################################################################
 
-def Canvas():
+def Canvas(command_line_token = ""):
     global token
     global course
     global assignment
 
-    PromptToken()
+    PromptToken(command_line_token)
 
     GetProfile()
     print("Hello, " + canvasProfile["name"])
@@ -552,7 +554,7 @@ def ProcessMenuOption(option):
         quit()
 
     if (command == "canvas"):
-        Canvas()
+        Canvas(filename)
         quit()
 
     if (command == "tsquare"):
@@ -568,7 +570,7 @@ def ProcessMenuOption(option):
         Tony(filename)
         quit()
 
-def PromptMenu():
+def PromptMenu(option=""):
     print("Which type of import?")
     print("> canvas")
     print("> tsquare filename.zip")
@@ -576,10 +578,10 @@ def PromptMenu():
     print("> tony filename.tar.gz")
 
     while True:
-        option = ""
         while len(option) <= 0:
             option = str(input(":")).strip()
         ProcessMenuOption(option)
+        option = ""
 
 ################################################################################
 
@@ -593,7 +595,14 @@ def main():
 
     plago_apikey = sys.argv[1]
 
-    PromptMenu()
+    option = ""
+    if (len(sys.argv) > 2):
+        option = sys.argv[2]
+
+    if (len(sys.argv) > 3):
+        option += " " + sys.argv[3]
+
+    PromptMenu(option)
 
     print("\nDone!\n")
 
