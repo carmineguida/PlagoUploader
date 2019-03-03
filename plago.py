@@ -58,26 +58,28 @@ def PlagoAPIPost(url, params, files=None):
         return result["data"]
 
 
-def PlagoBatchAdd(source, source_course_id, source_course_name, source_assignment_id, source_assignment_name):
+def PlagoBatchAdd(source, source_course_id, source_course_name, source_assignment_id, source_assignment_name, source_assignment_due = None):
     global plago_batch_id
     params = {
         "source":source,
         "source_course_id":source_course_id,
         "source_course_name":source_course_name,
         "source_assignment_id":source_assignment_id,
-        "source_assignment_name":source_assignment_name
+        "source_assignment_name":source_assignment_name,
+        "source_assignment_due": source_assignment_due
     }
 
     data = PlagoAPIPost("batch_add", params)
     plago_batch_id = data["id"]
 
 
-def PlagoBatchEntryAdd(batch_id, source_user_id, source_user_name, filename, data):
+def PlagoBatchEntryAdd(batch_id, source_user_id, source_user_name, filename, data, source_submitted = None):
     params = {
         "batch_id":batch_id,
         "source_user_id":source_user_id,
         "source_user_name":source_user_name,
-        "filename":filename
+        "filename":filename,
+        "source_submitted": source_submitted
     }
 
     stream = io.BytesIO(data)
@@ -322,7 +324,7 @@ def ProcessAssignment():
         return
 
     print("Adding Canvas Batch to Plago.")
-    PlagoBatchAdd(1, currentCourse["id"], currentCourse["name"], currentAssignment["id"], currentAssignment["name"]) # 1 = Canvas
+    PlagoBatchAdd(1, currentCourse["id"], currentCourse["name"], currentAssignment["id"], currentAssignment["name"], currentAssignment["due_at"]) # 1 = Canvas
     print("id: " + str(plago_batch_id))
 
     for user in canvasCourseUsers:
@@ -330,13 +332,13 @@ def ProcessAssignment():
         if (download is None):
             continue
 
-        (filename, submission) = download
+        (filename, submission, submitted_at) = download
 
         if (submission is None):
             continue
 
-        print("Adding: " + user["sortable_name"] + " (" + str(len(submission)) + " bytes)")
-        PlagoBatchEntryAdd(plago_batch_id, user["id"], user["sortable_name"], filename, submission)
+        print("Adding: " + user["sortable_name"] + " (" + str(len(submission)) + " bytes) submitted at: " + str(submitted_at))
+        PlagoBatchEntryAdd(plago_batch_id, user["id"], user["sortable_name"], filename, submission, submitted_at)
 
     print("\nQueuing Batch")
     PlagoBatchQueue(plago_batch_id)
@@ -366,7 +368,7 @@ def DownloadSubmissionByUser(user):
         return None
 
     response = requests.get(final_url)
-    return (filename, response.content)
+    return (filename, response.content, submission["submitted_at"])
 
 ################################################################################
 
