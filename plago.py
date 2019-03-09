@@ -91,7 +91,8 @@ def PlagoBatchEntryAdd(batch_id, source_user_id, source_user_name, filename, dat
 
 def PlagoBatchQueue(id):
     params = {
-        "id":id
+        "id":id,
+        "status":3
     }
 
     PlagoAPIPost("batch_queue", params)
@@ -430,7 +431,7 @@ def Custom(filename):
 
     CustomProcessArchive(archive, pdfs)
 
-    print("\nQueuing Batch")
+    print("\nBatch Uploaded! Go to the plago website to run a scan!")
     PlagoBatchQueue(plago_batch_id)
 
 ################################################################################
@@ -479,7 +480,7 @@ def Tsquare(filename):
 
     TsquareProcessArchive(archive, pdfs)
 
-    print("\nQueuing Batch")
+    print("\nBatch Uploaded! Go to the plago website to run a scan!")
     PlagoBatchQueue(plago_batch_id)
 
 ################################################################################
@@ -532,7 +533,7 @@ def Tony(filename):
         print ("  Uploading...")
         PlagoBatchEntryAdd(plago_batch_id, user_id, user_name, member.name, data)
 
-    print("\nQueuing Batch")
+    print("\nBatch Uploaded! Go to the plago website to run a scan!")
     PlagoBatchQueue(plago_batch_id)
 
 ################################################################################
